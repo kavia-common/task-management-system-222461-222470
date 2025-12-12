@@ -6,14 +6,17 @@ from flask_smorest import Api
 from .routes.health import blp as health_blp
 from .routes.tasks import blp as tasks_blp
 
+# Create a module-level Api object (not bound yet). This avoids double-initialization.
+api = Api()
 
+# PUBLIC_INTERFACE
 def create_app() -> Flask:
-    """
-    Create and configure the Flask application with CORS and OpenAPI docs.
+    """Create and configure the Flask application.
 
     - Enables CORS for http://localhost:3000
+    - Configures flask-smorest OpenAPI docs under /docs
     - Registers health and tasks blueprints
-    - Configures flask-smorest OpenAPI UI under /docs
+    Returns a Flask app instance.
     """
     app = Flask(__name__)
     app.url_map.strict_slashes = False
@@ -25,7 +28,7 @@ def create_app() -> Flask:
         supports_credentials=False,
     )
 
-    # OpenAPI / Swagger configuration
+    # OpenAPI / Swagger configuration (must be set before Api.init_app)
     app.config["API_TITLE"] = "Todo API"
     app.config["API_VERSION"] = "v1"
     app.config["OPENAPI_VERSION"] = "3.0.3"
@@ -33,9 +36,10 @@ def create_app() -> Flask:
     app.config["OPENAPI_SWAGGER_UI_PATH"] = ""
     app.config["OPENAPI_SWAGGER_UI_URL"] = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
 
-    api = Api(app)
+    # Initialize Api with app using factory pattern
+    api.init_app(app)
 
-    # Tags for grouping
+    # Tags for grouping in OpenAPI
     api.spec.components.security_scheme(
         "NoAuth", {"type": "http", "scheme": "none"}  # doc purpose only
     )
@@ -53,6 +57,5 @@ def create_app() -> Flask:
     return app
 
 
-# Provide app and api compatibility for existing imports and openapi generation script
+# Expose an app instance for simple runners and tools (e.g., generate_openapi.py)
 app = create_app()
-api = Api(app)
